@@ -43,66 +43,6 @@ AC_REQUIRE([MPFR_CHECK_LIBQUADMATH])
 AC_REQUIRE([AC_HEADER_TIME])
 AC_REQUIRE([AC_CANONICAL_HOST])
 
-dnl Features for the MPFR shared cache. This needs to be done
-dnl quite early since this may change CC, CFLAGS and LIBS, which
-dnl may affect the other tests.
-
-if test "$enable_shared_cache" = yes; then
-
-dnl Prefer ISO C11 threads (as in mpfr-thread.h).
-  MPFR_CHECK_C11_THREAD()
-
-  if test "$mpfr_c11_thread_ok" != yes; then
-dnl Check for POSIX threads. Since the AX_PTHREAD macro is not standard
-dnl (it is provided by autoconf-archive), we need to detect whether it
-dnl is left unexpanded, otherwise the configure script won't fail and
-dnl "make distcheck" won't give any error, yielding buggy tarballs!
-dnl The \b is necessary to avoid an error with recent ax_pthread.m4
-dnl (such as with Debian's autoconf-archive 20160320-1), which contains
-dnl AX_PTHREAD_ZOS_MISSING, etc. It is not documented, but see:
-dnl   https://lists.gnu.org/archive/html/autoconf/2015-03/msg00011.html
-dnl
-dnl Note: each time a change is done in m4_pattern_forbid, autogen.sh
-dnl should be tested with and without ax_pthread.m4 availability (in
-dnl the latter case, there should be an error).
-    m4_pattern_forbid([AX_PTHREAD\b])
-    AX_PTHREAD([])
-    if test "$ax_pthread_ok" = yes; then
-      CC="$PTHREAD_CC"
-      CFLAGS="$CFLAGS $PTHREAD_CFLAGS"
-      LIBS="$LIBS $PTHREAD_LIBS"
-dnl Do a compilation test, as this is currently not done by AX_PTHREAD.
-dnl Moreover, MPFR needs pthread_rwlock_t, which is conditionally defined
-dnl in glibc's bits/pthreadtypes.h (via <pthread.h>), not sure why...
-      AC_MSG_CHECKING([for pthread_rwlock_t])
-      AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
-#include <pthread.h>
-]], [[
-pthread_rwlock_t lock; (void) lock;
-]])],
-        [AC_MSG_RESULT([yes])
-         mpfr_pthread_ok=yes],
-        [AC_MSG_RESULT([no])
-         mpfr_pthread_ok=no])
-    else
-      mpfr_pthread_ok=no
-    fi
-  fi
-
-  AC_MSG_CHECKING(if shared cache can be supported)
-  if test "$mpfr_c11_thread_ok" = yes; then
-    AC_MSG_RESULT([yes, with ISO C11 threads])
-  elif test "$mpfr_pthread_ok" = yes; then
-    AC_MSG_RESULT([yes, with pthread])
-  else
-    AC_MSG_RESULT(no)
-    AC_MSG_ERROR([shared cache needs C11 threads or pthread support])
-  fi
-
-fi
-
-dnl End of features for the MPFR shared cache.
-
 AC_CHECK_HEADER([limits.h],, AC_MSG_ERROR([limits.h not found]))
 AC_CHECK_HEADER([float.h],,  AC_MSG_ERROR([float.h not found]))
 AC_CHECK_HEADER([string.h],, AC_MSG_ERROR([string.h not found]))
